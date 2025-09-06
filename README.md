@@ -1,10 +1,12 @@
-# Skatos
+# Skatos 🛹
 
 A simple Rust CLI tool to generate environment files from [skate](https://github.com/charmbracelet/skate) variables.
 
+![Demo](demo.gif)
+
 ## Prerequisites
 
-- [skate](https://github.com/charmbracelet/skate) must be installed on your system
+- [skate](https://github.com/charmbracelet/skate) 🛹 must be installed on your system
 - Rust (for building from source)
 
 ## Installation
@@ -50,7 +52,7 @@ source ~/.bashrc
 
 ### Environment File Generation
 
-Generate a `.env` file from all skate variables:
+Generate a `.env` file from all skate 🛹 variables:
 ```bash
 skatos env
 ```
@@ -78,7 +80,7 @@ skatos preview
 skatos preview --filter "DB_"
 ```
 
-### Skate Operations
+### Skate 🛹 Operations
 
 Set a variable:
 ```bash
@@ -112,7 +114,7 @@ skatos delete API_KEY
 
 ### Backup & Restore
 
-Backup all skate data:
+Backup all skate 🛹 data:
 ```bash
 skatos backup --output backup.json
 ```

@@ -52,8 +52,8 @@ check_dependencies() {
     fi
     
     if ! command -v skate &> /dev/null; then
-        print_warning "skate is not installed. This tool requires skate to function."
-        print_info "Install skate from: https://github.com/charmbracelet/skate"
+        print_warning "skate 🛹 is not installed. This tool requires skate to function."
+        print_info "Install skate 🛹 from: https://github.com/charmbracelet/skate"
         print_info "On macOS: brew install charmbracelet/tap/skate"
         print_info "Continuing installation anyway..."
     fi
@@ -166,7 +166,7 @@ cleanup() {
 
 main() {
     echo
-    print_colored "$BLUE" "🚀 Installing Skatos - Environment File Generator"
+    print_colored "$BLUE" "🚀 Installing Skatos 🛹 - Environment File Generator"
     echo
     
     check_dependencies

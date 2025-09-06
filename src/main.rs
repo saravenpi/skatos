@@ -8,7 +8,7 @@ use skate::Skate;
 
 #[derive(Parser)]
 #[command(name = "skatos")]
-#[command(about = "Generate environment files from skate variables")]
+#[command(about = "Generate environment files from skate 🛹 variables")]
 #[command(version = "0.1.0")]
 struct Cli {
     #[command(subcommand)]
@@ -17,14 +17,14 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(about = "Generate .env file from skate variables")]
+    #[command(about = "Generate .env file from skate 🛹 variables")]
     Env {
         #[arg(short, long, default_value = ".env")]
         output: String,
         #[arg(short, long, help = "Filter keys by prefix")]
         filter: Option<String>,
     },
-    #[command(about = "Generate .env file from specific skate database")]
+    #[command(about = "Generate .env file from specific skate 🛹 database")]
     EnvFromDb {
         #[arg(help = "Database name")]
         database: String,
@@ -36,35 +36,35 @@ enum Commands {
         #[arg(short, long, help = "Filter keys by prefix")]
         filter: Option<String>,
     },
-    #[command(about = "Set a key-value pair in skate")]
+    #[command(about = "Set a key-value pair in skate 🛹")]
     Set {
         #[arg(help = "Key name")]
         key: String,
         #[arg(help = "Value")]
         value: String,
     },
-    #[command(about = "Get a value from skate")]
+    #[command(about = "Get a value from skate 🛹")]
     Get {
         #[arg(help = "Key name")]
         key: String,
     },
-    #[command(about = "List all skate entries")]
+    #[command(about = "List all skate 🛹 entries")]
     List,
-    #[command(about = "List all skate keys")]
+    #[command(about = "List all skate 🛹 keys")]
     Keys,
-    #[command(about = "List all skate databases")]
+    #[command(about = "List all skate 🛹 databases")]
     Dbs,
-    #[command(about = "Delete a key from skate")]
+    #[command(about = "Delete a key from skate 🛹")]
     Delete {
         #[arg(help = "Key name")]
         key: String,
     },
-    #[command(about = "Backup all skate data to JSON file")]
+    #[command(about = "Backup all skate 🛹 data to JSON file")]
     Backup {
         #[arg(short, long, default_value = "skate_backup.json")]
         output: String,
     },
-    #[command(about = "Restore skate data from JSON file")]
+    #[command(about = "Restore skate 🛹 data from JSON file")]
     Restore {
         #[arg(help = "Input JSON file path")]
         input: String,
@@ -73,7 +73,7 @@ enum Commands {
 
 /// Entry point for the skatos CLI application.
 /// 
-/// Parses command line arguments and executes the appropriate skate operation
+/// Parses command line arguments and executes the appropriate skate 🛹 operation
 /// based on the subcommand provided.
 /// 
 /// # Returns
