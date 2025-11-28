@@ -90,6 +90,29 @@ skatos preview
 skatos preview --filter "DB_"
 ```
 
+### Export to Shell
+
+Export variables directly to your shell session (useful for `.bashrc`, `.zshrc`, etc.):
+
+```bash
+# Export all variables from default database
+eval "$(skatos export)"
+
+# Export from a specific database
+eval "$(skatos export --database casa)"
+
+# Export with filter
+eval "$(skatos export --filter "API")"
+```
+
+**Example use in shell config:**
+```bash
+# In your ~/.bashrc or ~/.zshrc
+eval "$(skatos export)"
+```
+
+This replaces the need for multiple individual `get` commands!
+
 ### Variable Operations
 
 Set a variable:

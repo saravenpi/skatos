@@ -152,6 +152,56 @@ impl EnvGenerator {
         Ok(())
     }
 
+    /// Exports shell variables for evaluation in shell (e.g., eval $(skatos export)).
+    ///
+    /// Outputs export statements that can be directly evaluated by bash/zsh.
+    /// Values are properly escaped and quoted for shell safety.
+    ///
+    /// # Arguments
+    ///
+    /// * `storage` - The storage instance
+    /// * `database` - Optional database name (defaults to "default")
+    /// * `filter` - Optional prefix to filter entries by key name
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` on success, or an error if reading entries fails.
+    pub fn export_shell(storage: &Storage, database: Option<&str>, filter: Option<&str>) -> Result<()> {
+        let entries = storage.list(database).context("Failed to list storage entries")?;
+
+        let filtered_entries: Vec<_> = if let Some(prefix) = filter {
+            entries
+                .into_iter()
+                .filter(|entry| entry.key.starts_with(prefix))
+                .collect()
+        } else {
+            entries
+        };
+
+        for entry in filtered_entries {
+            let key = entry.key.to_uppercase().replace('-', "_").replace(' ', "_");
+            let escaped_value = Self::shell_escape(&entry.value);
+            println!("export {}={}", key, escaped_value);
+        }
+
+        Ok(())
+    }
+
+    /// Escapes a value for safe shell evaluation.
+    ///
+    /// Uses single quotes for safety and escapes any single quotes in the value.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The value to escape
+    ///
+    /// # Returns
+    ///
+    /// Returns the properly escaped value suitable for shell export.
+    fn shell_escape(value: &str) -> String {
+        format!("'{}'", value.replace('\'', "'\\''"))
+    }
+
     /// Creates a JSON backup of all entries.
     /// 
     /// # Arguments

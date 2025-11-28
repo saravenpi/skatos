@@ -39,6 +39,13 @@ enum Commands {
         #[arg(short, long, help = "Filter keys by prefix")]
         filter: Option<String>,
     },
+    #[command(about = "Export shell variables for eval (e.g., eval $(skatos export))")]
+    Export {
+        #[arg(short, long, help = "Database name (default: default)")]
+        database: Option<String>,
+        #[arg(short, long, help = "Filter keys by prefix")]
+        filter: Option<String>,
+    },
     #[command(about = "Set a key-value pair")]
     Set {
         #[arg(help = "Key name")]
@@ -103,6 +110,9 @@ async fn main() -> Result<()> {
         }
         Commands::Preview { filter } => {
             EnvGenerator::show_preview(&storage, filter.as_deref())?;
+        }
+        Commands::Export { database, filter } => {
+            EnvGenerator::export_shell(&storage, database.as_deref(), filter.as_deref())?;
         }
         Commands::Set { key, value } => {
             storage.set(&key, &value, None)?;
