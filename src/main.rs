@@ -1,10 +1,13 @@
-mod skate;
+mod storage;
 mod env_gen;
+mod colors;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::{generate, Shell};
 use env_gen::EnvGenerator;
-use skate::Skate;
+use storage::Storage;
+use colors::ColoredOutput;
 
 #[derive(Parser)]
 #[command(name = "skatos")]
@@ -69,6 +72,13 @@ enum Commands {
         #[arg(help = "Input JSON file path")]
         input: String,
     },
+    #[command(about = "Import data from original skate 🛹 (requires skate CLI)")]
+    Import,
+    #[command(about = "Generate shell completions")]
+    Completions {
+        #[arg(help = "Shell type (bash, zsh, fish, elvish, powershell)")]
+        shell: Shell,
+    },
 }
 
 /// Entry point for the skatos CLI application.
@@ -82,52 +92,109 @@ enum Commands {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+    let storage = Storage::new()?;
 
     match cli.command {
         Commands::Env { output, filter } => {
-            EnvGenerator::generate_env_file(&output, filter.as_deref())?;
+            EnvGenerator::generate_env_file(&storage, &output, filter.as_deref())?;
         }
         Commands::EnvFromDb { database, output } => {
-            EnvGenerator::generate_from_db(&database, &output)?;
+            EnvGenerator::generate_from_db(&storage, &database, &output)?;
         }
         Commands::Preview { filter } => {
-            EnvGenerator::show_preview(filter.as_deref())?;
+            EnvGenerator::show_preview(&storage, filter.as_deref())?;
         }
         Commands::Set { key, value } => {
-            Skate::set(&key, &value)?;
-            println!("Set {}={}", key, value);
+            storage.set(&key, &value, None)?;
+            println!("{} {}",
+                ColoredOutput::success("Set"),
+                ColoredOutput::format_key_value(&key, &value)
+            );
         }
         Commands::Get { key } => {
-            let value = Skate::get(&key)?;
-            println!("{}", value);
+            match storage.get(&key, None)? {
+                Some(value) => println!("{}", ColoredOutput::value(&value)),
+                None => println!("{} Key '{}' not found",
+                    ColoredOutput::error("Error:"),
+                    ColoredOutput::key(&key)
+                ),
+            }
         }
         Commands::List => {
-            let entries = Skate::list()?;
-            for entry in entries {
-                println!("{}\t{}", entry.key, entry.value);
+            let entries = storage.list(None)?;
+            if entries.is_empty() {
+                println!("{}", ColoredOutput::warning("No entries found"));
+            } else {
+                for entry in entries {
+                    println!("{}", ColoredOutput::format_key_value(&entry.key, &entry.value));
+                }
             }
         }
         Commands::Keys => {
-            let keys = Skate::list_keys()?;
-            for key in keys {
-                println!("{}", key);
+            let keys = storage.list_keys(None)?;
+            if keys.is_empty() {
+                println!("{}", ColoredOutput::warning("No keys found"));
+            } else {
+                for key in keys {
+                    println!("{}", ColoredOutput::key(&key));
+                }
             }
         }
         Commands::Dbs => {
-            let dbs = Skate::list_dbs()?;
-            for db in dbs {
-                println!("{}", db);
+            let dbs = storage.list_databases()?;
+            if dbs.is_empty() {
+                println!("{}", ColoredOutput::warning("No databases found"));
+            } else {
+                println!("{}", ColoredOutput::header("Available databases:"));
+                for db in dbs {
+                    println!("  {} {}",
+                        "●".to_string(),
+                        ColoredOutput::database(&db)
+                    );
+                }
             }
         }
         Commands::Delete { key } => {
-            Skate::delete(&key)?;
-            println!("Deleted {}", key);
+            if storage.delete(&key, None)? {
+                println!("{} Deleted {}",
+                    ColoredOutput::success("Success:"),
+                    ColoredOutput::key(&key)
+                );
+            } else {
+                println!("{} Key '{}' not found",
+                    ColoredOutput::error("Error:"),
+                    ColoredOutput::key(&key)
+                );
+            }
         }
         Commands::Backup { output } => {
-            EnvGenerator::backup_to_file(&output)?;
+            EnvGenerator::backup_to_file(&storage, &output)?;
         }
         Commands::Restore { input } => {
-            EnvGenerator::restore_from_file(&input)?;
+            EnvGenerator::restore_from_file(&storage, &input)?;
+        }
+        Commands::Import => {
+            println!("{}", ColoredOutput::info("Importing data from skate..."));
+            match storage.import_from_skate() {
+                Ok(count) => {
+                    println!("{} Successfully imported {} entries",
+                        ColoredOutput::success("Success:"),
+                        ColoredOutput::count(count)
+                    );
+                }
+                Err(e) => {
+                    println!("{} Failed to import: {}",
+                        ColoredOutput::error("Error:"),
+                        e
+                    );
+                }
+            }
+        }
+        Commands::Completions { shell } => {
+            let mut cmd = Cli::command();
+            generate(shell, &mut cmd, "skatos", &mut std::io::stdout());
+            println!("\n{}", ColoredOutput::success("Completion script generated"));
+            println!("{}", ColoredOutput::info("Add the output to your shell's configuration file"));
         }
     }
 

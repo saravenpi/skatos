@@ -1,9 +1,8 @@
 use anyhow::{Context, Result};
-use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
 
-use crate::skate::{Skate, SkateEntry};
+use crate::storage::{Storage, SkateEntry};
+use crate::colors::ColoredOutput;
 
 pub struct EnvGenerator;
 
@@ -18,9 +17,9 @@ impl EnvGenerator {
     /// # Returns
     /// 
     /// Returns `Ok(())` on success, or an error if reading entries or writing file fails.
-    pub fn generate_env_file(output_path: &str, filter: Option<&str>) -> Result<()> {
-        let entries = Skate::list().context("Failed to list skate entries")?;
-        
+    pub fn generate_env_file(storage: &Storage, output_path: &str, filter: Option<&str>) -> Result<()> {
+        let entries = storage.list(None).context("Failed to list storage entries")?;
+
         let filtered_entries = if let Some(prefix) = filter {
             entries
                 .into_iter()
@@ -31,15 +30,19 @@ impl EnvGenerator {
         };
 
         let env_content = Self::entries_to_env_format(&filtered_entries);
-        
+
         fs::write(output_path, env_content)
             .with_context(|| format!("Failed to write env file to {}", output_path))?;
 
-        println!("Generated {} environment variables to {}", filtered_entries.len(), output_path);
+        println!("{} Generated {} environment variables to {}",
+            ColoredOutput::success("Success:"),
+            ColoredOutput::count(filtered_entries.len()),
+            ColoredOutput::path(output_path)
+        );
         Ok(())
     }
 
-    /// Generates an environment file from entries in a specific skate database.
+    /// Generates an environment file from entries in a specific database.
     /// 
     /// # Arguments
     /// 
@@ -49,35 +52,24 @@ impl EnvGenerator {
     /// # Returns
     /// 
     /// Returns `Ok(())` on success, or an error if database operations or file writing fails.
-    pub fn generate_from_db(db_name: &str, output_path: &str) -> Result<()> {
-        let keys = Skate::list_keys().context("Failed to list skate keys")?;
-        
-        let db_keys: Vec<String> = keys
-            .into_iter()
-            .filter(|key| key.contains(&format!("@{}", db_name)))
-            .collect();
-
-        let mut entries = Vec::new();
-        for key in db_keys {
-            if let Ok(value) = Skate::get(&key) {
-                let clean_key = key.replace(&format!("@{}", db_name), "");
-                entries.push(SkateEntry {
-                    key: clean_key,
-                    value,
-                });
-            }
-        }
+    pub fn generate_from_db(storage: &Storage, db_name: &str, output_path: &str) -> Result<()> {
+        let entries = storage.list(Some(db_name)).context("Failed to list database entries")?;
 
         let env_content = Self::entries_to_env_format(&entries);
-        
+
         fs::write(output_path, env_content)
             .with_context(|| format!("Failed to write env file to {}", output_path))?;
 
-        println!("Generated {} environment variables from database '{}' to {}", entries.len(), db_name, output_path);
+        println!("{} Generated {} environment variables from database {} to {}",
+            ColoredOutput::success("Success:"),
+            ColoredOutput::count(entries.len()),
+            ColoredOutput::database(db_name),
+            ColoredOutput::path(output_path)
+        );
         Ok(())
     }
 
-    /// Converts skate entries to environment file format.
+    /// Converts entries to environment file format.
     /// 
     /// Keys are converted to uppercase with dashes and spaces replaced by underscores.
     /// Values containing spaces, newlines, or quotes are automatically quoted.
@@ -129,9 +121,9 @@ impl EnvGenerator {
     /// # Returns
     /// 
     /// Returns `Ok(())` on success, or an error if reading entries fails.
-    pub fn show_preview(filter: Option<&str>) -> Result<()> {
-        let entries = Skate::list().context("Failed to list skate entries")?;
-        
+    pub fn show_preview(storage: &Storage, filter: Option<&str>) -> Result<()> {
+        let entries = storage.list(None).context("Failed to list storage entries")?;
+
         let filtered_entries = if let Some(prefix) = filter {
             entries
                 .into_iter()
@@ -142,16 +134,25 @@ impl EnvGenerator {
         };
 
         if filtered_entries.is_empty() {
-            println!("No entries found");
+            println!("{}", ColoredOutput::warning("No entries found"));
             return Ok(());
         }
 
-        println!("Preview of environment variables:");
-        println!("{}", Self::entries_to_env_format(&filtered_entries));
+        println!("{}", ColoredOutput::header("Preview of environment variables:"));
+        println!();
+        for entry in &filtered_entries {
+            let key = entry.key.to_uppercase().replace('-', "_").replace(' ', "_");
+            println!("{}", ColoredOutput::format_env_line(&key, &Self::quote_value(&entry.value)));
+        }
+        println!();
+        println!("{} {} variables total",
+            ColoredOutput::info("Info:"),
+            ColoredOutput::count(filtered_entries.len())
+        );
         Ok(())
     }
 
-    /// Creates a JSON backup of all skate entries.
+    /// Creates a JSON backup of all entries.
     /// 
     /// # Arguments
     /// 
@@ -160,19 +161,23 @@ impl EnvGenerator {
     /// # Returns
     /// 
     /// Returns `Ok(())` on success, or an error if reading entries or writing file fails.
-    pub fn backup_to_file(output_path: &str) -> Result<()> {
-        let entries = Skate::list().context("Failed to list skate entries")?;
+    pub fn backup_to_file(storage: &Storage, output_path: &str) -> Result<()> {
+        let entries = storage.list(None).context("Failed to list storage entries")?;
         let json = serde_json::to_string_pretty(&entries)
             .context("Failed to serialize entries to JSON")?;
-        
+
         fs::write(output_path, json)
             .with_context(|| format!("Failed to write backup file to {}", output_path))?;
 
-        println!("Backed up {} entries to {}", entries.len(), output_path);
+        println!("{} Backed up {} entries to {}",
+            ColoredOutput::success("Success:"),
+            ColoredOutput::count(entries.len()),
+            ColoredOutput::path(output_path)
+        );
         Ok(())
     }
 
-    /// Restores skate entries from a JSON backup file.
+    /// Restores entries from a JSON backup file.
     /// 
     /// # Arguments
     /// 
@@ -181,21 +186,25 @@ impl EnvGenerator {
     /// # Returns
     /// 
     /// Returns `Ok(())` on success, or an error if reading file or setting entries fails.
-    pub fn restore_from_file(input_path: &str) -> Result<()> {
+    pub fn restore_from_file(storage: &Storage, input_path: &str) -> Result<()> {
         let content = fs::read_to_string(input_path)
             .with_context(|| format!("Failed to read backup file from {}", input_path))?;
-        
+
         let entries: Vec<SkateEntry> = serde_json::from_str(&content)
             .context("Failed to parse backup file as JSON")?;
 
         let mut restored = 0;
         for entry in entries {
-            if Skate::set(&entry.key, &entry.value).is_ok() {
+            if storage.set(&entry.key, &entry.value, None).is_ok() {
                 restored += 1;
             }
         }
 
-        println!("Restored {} entries from {}", restored, input_path);
+        println!("{} Restored {} entries from {}",
+            ColoredOutput::success("Success:"),
+            ColoredOutput::count(restored),
+            ColoredOutput::path(input_path)
+        );
         Ok(())
     }
 }

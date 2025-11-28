@@ -1,13 +1,23 @@
 # Skatos 🛹
 
-A simple Rust CLI tool to generate environment files from [skate](https://github.com/charmbracelet/skate) variables.
+A fast, colorful Rust CLI tool for managing environment variables with YAML-based storage.
+
+**Inspired by [Charm's skate](https://github.com/charmbracelet/skate)**, but reimplemented from scratch in pure Rust with enhanced features like color-coded output and shell autocompletion.
 
 ![Demo](demo.gif)
 
+## Features
+
+- Pure Rust implementation with YAML storage in `~/.skatos/`
+- Beautiful color-coded output for better readability
+- Shell autocompletion for bash, zsh, fish, elvish, and powershell
+- Fast and lightweight
+- Import capability from original skate
+
 ## Prerequisites
 
-- [skate](https://github.com/charmbracelet/skate) 🛹 must be installed on your system
 - Rust (for building from source)
+- Optional: [Charm's skate](https://github.com/charmbracelet/skate) (only needed if you want to import existing data from skate)
 
 ## Installation
 
@@ -80,7 +90,7 @@ skatos preview
 skatos preview --filter "DB_"
 ```
 
-### Skate 🛹 Operations
+### Variable Operations
 
 Set a variable:
 ```bash
@@ -114,7 +124,7 @@ skatos delete API_KEY
 
 ### Backup & Restore
 
-Backup all skate 🛹 data:
+Backup all skatos data:
 ```bash
 skatos backup --output backup.json
 ```
@@ -122,6 +132,29 @@ skatos backup --output backup.json
 Restore from backup:
 ```bash
 skatos restore backup.json
+```
+
+### Import from Charm's Skate
+
+If you have existing data in Charm's skate, you can import it:
+```bash
+skatos import
+```
+
+Note: This requires the skate CLI to be installed.
+
+### Shell Completions
+
+Generate shell completions:
+```bash
+# For zsh
+skatos completions zsh > ~/.zsh/completions/_skatos
+
+# For bash
+skatos completions bash > ~/.local/share/bash-completion/completions/skatos
+
+# For fish
+skatos completions fish > ~/.config/fish/completions/skatos.fish
 ```
 
 ## Examples
